@@ -10,25 +10,21 @@ let writeTestFile =
 let readFile path =
     File.ReadAllText(path)
 
-type SemVer = {
-    Major: int
-    Minor: int
-    Patch: int
-}
-
-let version major minor patch = {
-    Major = major
-    Minor = minor
-    Patch = patch
-}
-
-let versionArr (arr: int array) =
-    version arr.[0] arr.[1] arr.[2]
-
 let parseVersion (text: string) =
     text.Trim().Split '.'
-    |> Array.map Int32.Parse
-    |> versionArr
+    |> Seq.map Int32.Parse
+
+let serializeVersion (a: seq<int>) =
+    String.Join ('.', a)
+
+let uncurry f (a,b) = f a b
+
+let zipMap f a b =
+    Seq.zip a b
+    |> Seq.map (uncurry f)
+
+let addVersion = zipMap (+)
+let subtractVersion = zipMap (-)
 
 [<EntryPoint>]
 let main argv =
@@ -39,6 +35,14 @@ let main argv =
 
     let versions = Array.map (readFile >> parseVersion) argv
 
-    printfn "||| Merged version: %s |||" "1.1.1"
+    let myBump = subtractVersion versions.[1] versions.[0]
+    let theirBump = subtractVersion versions.[2] versions.[0]
+    let totalBump = addVersion myBump theirBump
+    let totalVersion = addVersion versions.[0] totalBump
+    let totalVersionStr = serializeVersion totalVersion
+
+    writeFile argv.[1] totalVersionStr
+
+    printfn "||| Merged version: %s |||" totalVersionStr
 
     0 // return an integer exit code
