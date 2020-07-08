@@ -4,9 +4,6 @@ open System.IO
 let writeFile path contents =
     File.WriteAllText(path, contents)
 
-let writeTestFile =
-    writeFile "./Test.txt"
-
 let readFile path =
     File.ReadAllText(path)
 
@@ -28,21 +25,21 @@ let subtractVersion = zipMap (-)
 
 [<EntryPoint>]
 let main argv =
-    let ancestorContents = readFile argv.[0]
-    let currentContents = readFile argv.[1]
-    let otherContents = readFile argv.[2]
-    printfn "|| %s || %s || %s ||" ancestorContents currentContents otherContents
-
     let versions = Array.map (readFile >> parseVersion) argv
 
-    let myBump = subtractVersion versions.[1] versions.[0]
-    let theirBump = subtractVersion versions.[2] versions.[0]
-    let totalBump = addVersion myBump theirBump
-    let totalVersion = addVersion versions.[0] totalBump
-    let totalVersionStr = serializeVersion totalVersion
+    let ancestor = versions.[0]
+    let current = versions.[1]
+    let other = versions.[2]
 
-    writeFile argv.[1] totalVersionStr
+    let getBump version = subtractVersion version ancestor
 
-    printfn "||| Merged version: %s |||" totalVersionStr
+    let totalVersion =
+        addVersion (getBump current) (getBump other)
+        |> addVersion ancestor
+        |> serializeVersion
 
-    0 // return an integer exit code
+    writeFile argv.[1] totalVersion
+
+    printfn "||| Merged version: %s |||" totalVersion
+
+    0
